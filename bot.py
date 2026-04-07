@@ -3,13 +3,25 @@ from telebot import types
 import yt_dlp
 import instaloader
 import os
+from flask import Flask
+import threading
 
 # 🔑 PUT YOUR TOKEN HERE
 BOT_TOKEN = '8674483372:AAEZ9W4emk4BE5Pf1EF0NV9Rqkg9v1QC3Vc'
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
-# 🟢 START (INLINE BUTTONS UI)
+# 🌐 FAKE WEB SERVER (FOR RENDER)
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "Bot is running"
+
+def run_web():
+    app.run(host="0.0.0.0", port=10000)
+
+# 🟢 START MENU (INLINE BUTTONS)
 @bot.message_handler(commands=['start'])
 def start(message):
     markup = types.InlineKeyboardMarkup()
@@ -24,7 +36,7 @@ def start(message):
         reply_markup=markup
     )
 
-# 🟢 HANDLE BUTTON CLICKS
+# 🟢 BUTTON HANDLER
 @bot.callback_query_handler(func=lambda call: True)
 def callback_handler(call):
 
@@ -35,6 +47,9 @@ def callback_handler(call):
     elif call.data == "reels":
         msg = bot.send_message(call.message.chat.id, "📸 Send Instagram reel link:")
         bot.register_next_step_handler(msg, download_reel)
+
+    elif call.data == "back":
+        start(call.message)
 
 # 🎵 MUSIC DOWNLOAD
 def download_music(message):
@@ -64,7 +79,6 @@ def download_music(message):
 
         os.remove("song.mp3")
 
-        # 🔙 Back button
         markup = types.InlineKeyboardMarkup()
         markup.add(types.InlineKeyboardButton("🔙 Back to Menu", callback_data="back"))
 
@@ -96,7 +110,6 @@ def download_reel(message):
 
         os.rmdir("reel")
 
-        # 🔙 Back button
         markup = types.InlineKeyboardMarkup()
         markup.add(types.InlineKeyboardButton("🔙 Back to Menu", callback_data="back"))
 
@@ -105,10 +118,8 @@ def download_reel(message):
     except Exception as e:
         bot.send_message(message.chat.id, f"❌ Error: {e}")
 
-# 🔙 BACK BUTTON HANDLER
-@bot.callback_query_handler(func=lambda call: call.data == "back")
-def back_to_menu(call):
-    start(call.message)
-
 print("🚀 Bot is running...")
+
+# 🚀 RUN BOTH BOT + WEB SERVER
+threading.Thread(target=run_web).start()
 bot.infinity_polling()
